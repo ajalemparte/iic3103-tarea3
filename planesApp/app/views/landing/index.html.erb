@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+       #map {
+        height: 600px;
+        width: 100%;
+       }
+    </style>
+  </head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.1/socket.io.js"></script>
+  <body>
+    <div id="map"></div>
+    <script>
+
+	    var url = 'wss://integracion-tarea-3.herokuapp.com';
+	    var socket = io(
+	      url,
+	      {
+	        path: "/flights",
+	        reconnect: true,
+	        transports: ['websocket', 'polling']
+	      }
+	    );
+
+	    socket.on('connect', () => console.log('CONNECTED'));
+
+	    function createInfoWindowAirport(map, marker, airport, infowindows) {
+	    	var contentString = '<div id="content">'+'<div id="siteNotice">'+'</div>'+
+				      '<h3>' + airport.name + '</h3>' +
+				      '<t>' + airport.airport_code + '</t><br>' +
+				      '<t>' + airport.city + ", " + airport.country + '</t><br>' +
+				      '<t>' + airport.airport_position[0] + ", " + airport.airport_position[1] + '</t><br>' +
+				      '</div>'+'</div>';
+    		var infowindow = new google.maps.InfoWindow({
+			    content: contentString
+			  });
+			  // infowindow.open(map, marker);
+			  marker.addListener('click', function() {
+			  	infowindows.forEach(function(info) {
+				     info.close(map);
+				  }); 
+			    infowindow.open(map, marker);
+			  });
+			  return infowindow;
+			}	
+			function createInfoWindowFlight(map, marker, flight, infowindows) {
+				console.log(flight)
+	    	var contentString = '<div id="content">'+'<div id="siteNotice">'+'</div>'+
+				      '<h3>' + flight.code + '</h3>' +
+				      '<t> Origen: ' + flight.origin.name + '</t><br>' +
+				      '<t> Destino: ' + flight.destination.name + '</t><br>' +
+				      '<t> Aerolinea' + flight.airline + '</t><br>' +
+				      '</div>'+'</div>';
+    		var infowindow = new google.maps.InfoWindow({
+			    content: contentString
+			  });
+			  marker.addListener('click', function() {
+			  	infowindows.forEach(function(info) {
+				     info.close(map);
+				  }); 
+			    infowindow.open(map, marker);
+			  });
+			  return infowindow;
+			}	
+      function initMap() {
+      	map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 4,
+          center: new google.maps.LatLng(-32,-70.3),
+          mapTypeId: 'terrain'
+        });
+        // var airports = [];
+        var infowindows = [];
+        socket.emit('AIRPORTS');
+        socket.on('AIRPORTS', (data) => {
+        	for(var airport in data) {
+        		// airports.push(data[airport]);
+						var coords = data[airport].airport_position;
+						var latLng = new google.maps.LatLng(coords[0],coords[1]);
+						var marker = new google.maps.Marker({
+						  position: latLng,
+						  map: map
+						});
+						var contentString = '<div id="content">'+'<div id="siteNotice">'+'</div>'+
+						      '<h3>' + data[airport].name + '</h3>' +
+						      '</div>'+'</div>';
+		    		var infowindow = new google.maps.InfoWindow({
+					    content: contentString
+					  });
+					  
+						// var infowindow = createInfoWindowAirport(map, marker, data[airport])
+						// marker.addListener('click', function() {
+					 //    infowindow.open(map, marker);
+					 //  });
+					  infowindows.push(createInfoWindowAirport(map, marker, data[airport], infowindows));
+        		// marker.addListener('click', createInfoWindowAirport(map, marker, data[airport]));
+       //  		marker.addListener('click', function() {
+							// createInfoWindowAirport(map, marker, data[airport]);
+					  // });
+					}
+				});
+				var flights = [];
+				socket.emit('FLIGHTS');
+        socket.on('FLIGHTS', (data) => {
+        	for (var flight in data) {
+        		flights.push(data[flight]);
+        		var origin = data[flight].origin;
+        		var destination = data[flight].destination;
+						var coords = origin.airport_position;
+						var line = new google.maps.Polyline({
+						    path: [
+						        new google.maps.LatLng(origin.airport_position[0], origin.airport_position[1]), 
+						        new google.maps.LatLng(destination.airport_position[0], destination.airport_position[1])
+						    ],
+						    strokeColor: "#9c9fa3",
+						    strokeOpacity: 0.5,
+						    strokeWeight: 5,
+						    map: map
+						});
+					}
+					var planes = [];
+					socket.on('POSITION', (data) => {
+						// console.log(data);
+						var found = false;
+						var plane = null;
+						for(var item in planes) {
+							if (planes[item].code == data.code) {
+								found = true;
+								plane = planes[item];
+								break;
+							}
+						}
+						var latLng = new google.maps.LatLng(data.position[0],data.position[1]);
+						if (found) {
+							plane.marker.setPosition(latLng);
+						} else {
+			  			var marker = new google.maps.Marker({
+							  position: latLng,
+							  map: map
+							});
+							var flight = null;
+							for (var item in flights) {
+								if (flights[item].code == data.code) {
+									flight = flights[item];
+								}
+							}
+					  	// createInfoWindowFlight(map, marker, flight)
+							infowindows.push(createInfoWindowFlight(map, marker, flight, infowindows));
+							// markers.push(marker);
+							// marker.addListener('click', function() {
+						 //    infowindow.open(map, marker);
+						 //  });
+							plane = {code: data.code, marker: marker, flight: flight};
+							planes.push(plane);
+						}
+	   			});
+
+				  // var infowindow = new google.maps.InfoWindow({
+				  //   content: contentString
+				  // });
+				});
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCpAJfYzeq3e3vy8rMafoicRlO-DlF75Vg&callback=initMap">
+    </script>
+  </body>
+</html>

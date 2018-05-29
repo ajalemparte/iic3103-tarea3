@@ -77,7 +77,8 @@
 						var coords = data[airport].airport_position;
 						var latLng = new google.maps.LatLng(coords[0],coords[1]);
 						var icon = {
-						    url: "/assets/airport-sign.jpg",
+						    // url: "/assets/airport-sign.jpg",
+						    url: "https://www.publicdomainpictures.net/pictures/20000/velka/airport-sign.jpg",
 						    scaledSize: new google.maps.Size(20, 20), // scaled size
 						    origin: new google.maps.Point(0,0), // origin
 						    anchor: new google.maps.Point(10,10) // anchor
@@ -133,7 +134,8 @@
 							path.push(latLng);
 						} else {
 							var icon = {
-							    url: "/assets/airplane.png",
+							    // url: "/assets/airplane.png",
+							    url: "https://cdn.pixabay.com/photo/2014/04/02/10/39/airplane-304110_1280.png",
 							    scaledSize: new google.maps.Size(20, 20), // scaled size
 							    origin: new google.maps.Point(0,0), // origin
 							    anchor: new google.maps.Point(10,10) // anchor
